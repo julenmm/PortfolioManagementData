@@ -55,7 +55,7 @@ After startup, access the services at:
 - **Django Backend**: http://localhost:8000
 - **Apache Airflow**: http://localhost:8080
 - **Apache Superset**: http://localhost:8088
-- **PGAdmin4**: http://localhost:8080
+- **PGAdmin4**: http://localhost:5050
 
 ### Default Credentials
 

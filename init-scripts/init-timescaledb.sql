@@ -51,28 +51,26 @@ CREATE TABLE IF NOT EXISTS metadata.data_updates (
 
 -- China Manufacturing PMIs (FRED)
 CREATE TABLE IF NOT EXISTS china.manufacturing_pmi (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     pmi_value DECIMAL(10,4),
-    source VARCHAR(50) DEFAULT 'FRED',
-    series_id VARCHAR(50),
+    source TEXT DEFAULT 'FRED',
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('china.manufacturing_pmi', 'date', if_not_exists => TRUE);
 
 -- China Real Rates (OECD)
 CREATE TABLE IF NOT EXISTS china.real_rates (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     real_rate DECIMAL(10,4),
     nominal_rate DECIMAL(10,4),
     inflation_rate DECIMAL(10,4),
-    source VARCHAR(50) DEFAULT 'OECD',
-    series_id VARCHAR(50),
+    source TEXT DEFAULT 'OECD',
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('china.real_rates', 'date', if_not_exists => TRUE);
@@ -83,61 +81,57 @@ SELECT create_hypertable('china.real_rates', 'date', if_not_exists => TRUE);
 
 -- Durable Goods Shipments (FRED)
 CREATE TABLE IF NOT EXISTS coincident_indicators.durable_goods_shipments (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     value DECIMAL(15,2),
     percent_change DECIMAL(10,4),
-    series_id VARCHAR(50),
+    series_id TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('coincident_indicators.durable_goods_shipments', 'date', if_not_exists => TRUE);
 
 -- Employment Situation Report (BLS)
 CREATE TABLE IF NOT EXISTS coincident_indicators.employment_situation (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     total_nonfarm_payroll INTEGER,
     unemployment_rate DECIMAL(5,2),
     labor_force_participation_rate DECIMAL(5,2),
     average_hourly_earnings DECIMAL(10,2),
     average_weekly_hours DECIMAL(5,2),
-    series_id VARCHAR(50),
+    series_id TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('coincident_indicators.employment_situation', 'date', if_not_exists => TRUE);
 
 -- Industrial Production (FRED)
 CREATE TABLE IF NOT EXISTS coincident_indicators.industrial_production (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     index_value DECIMAL(10,4),
     percent_change DECIMAL(10,4),
-    series_id VARCHAR(50),
-    industry_category VARCHAR(100),
+    series_id TEXT,
+    industry_category TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id, industry_category)
+    PRIMARY KEY (date, series_id, industry_category)
 );
 
 SELECT create_hypertable('coincident_indicators.industrial_production', 'date', if_not_exists => TRUE);
 
 -- Jobless Claims (FRED)
 CREATE TABLE IF NOT EXISTS coincident_indicators.jobless_claims (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     initial_claims INTEGER,
     continuing_claims INTEGER,
     four_week_moving_avg INTEGER,
-    series_id VARCHAR(50),
+    series_id TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('coincident_indicators.jobless_claims', 'date', if_not_exists => TRUE);
@@ -148,9 +142,8 @@ SELECT create_hypertable('coincident_indicators.jobless_claims', 'date', if_not_
 
 -- Commitment of Traders (NASDAQ)
 CREATE TABLE IF NOT EXISTS commodities.cot_metals_energy (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    commodity VARCHAR(50) NOT NULL,
+    commodity TEXT NOT NULL,
     commercial_long INTEGER,
     commercial_short INTEGER,
     noncommercial_long INTEGER,
@@ -158,53 +151,50 @@ CREATE TABLE IF NOT EXISTS commodities.cot_metals_energy (
     total_open_interest INTEGER,
     net_position INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, commodity)
+    PRIMARY KEY (date, commodity)
 );
 
 SELECT create_hypertable('commodities.cot_metals_energy', 'date', if_not_exists => TRUE);
 
 -- Commodity Prices (IMF)
 CREATE TABLE IF NOT EXISTS commodities.commodity_prices (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    commodity_name VARCHAR(100) NOT NULL,
+    commodity_name TEXT NOT NULL,
     price DECIMAL(15,4),
-    unit VARCHAR(20),
-    currency VARCHAR(10) DEFAULT 'USD',
-    price_type VARCHAR(50),
+    unit TEXT,
+    currency TEXT DEFAULT 'USD',
+    price_type TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, commodity_name, price_type)
+    PRIMARY KEY (date, commodity_name, price_type)
 );
 
 SELECT create_hypertable('commodities.commodity_prices', 'date', if_not_exists => TRUE);
 
 -- Commodities Summary (EIA)
 CREATE TABLE IF NOT EXISTS commodities.eia_summary (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    series_id VARCHAR(50) NOT NULL,
-    product VARCHAR(100),
+    series_id TEXT NOT NULL,
+    product TEXT,
     value DECIMAL(15,4),
-    unit VARCHAR(50),
-    frequency VARCHAR(20),
+    unit TEXT,
+    frequency TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('commodities.eia_summary', 'date', if_not_exists => TRUE);
 
 -- Cyclical Commodities Demand Supply (EIA)
 CREATE TABLE IF NOT EXISTS commodities.demand_supply_factors (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    commodity VARCHAR(50) NOT NULL,
+    commodity TEXT NOT NULL,
     demand DECIMAL(15,4),
     supply DECIMAL(15,4),
     inventory DECIMAL(15,4),
     capacity_utilization DECIMAL(5,2),
-    unit VARCHAR(50),
+    unit TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, commodity)
+    PRIMARY KEY (date, commodity)
 );
 
 SELECT create_hypertable('commodities.demand_supply_factors', 'date', if_not_exists => TRUE);
@@ -215,23 +205,21 @@ SELECT create_hypertable('commodities.demand_supply_factors', 'date', if_not_exi
 
 -- Benchmark Yields EU (ECB)
 CREATE TABLE IF NOT EXISTS europe.benchmark_yields_ecb (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    country VARCHAR(10) NOT NULL,
-    maturity VARCHAR(20) NOT NULL,
+    country TEXT NOT NULL,
+    maturity TEXT NOT NULL,
     yield DECIMAL(10,4),
-    series_id VARCHAR(50),
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, country, maturity)
+    PRIMARY KEY (date, country, maturity)
 );
 
 SELECT create_hypertable('europe.benchmark_yields_ecb', 'date', if_not_exists => TRUE);
 
 -- European Economic Sentiment Indicator (ECB)
 CREATE TABLE IF NOT EXISTS europe.economic_sentiment (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    country VARCHAR(10) NOT NULL,
+    country TEXT NOT NULL,
     esi_value DECIMAL(10,2),
     industrial_confidence DECIMAL(10,2),
     services_confidence DECIMAL(10,2),
@@ -239,22 +227,21 @@ CREATE TABLE IF NOT EXISTS europe.economic_sentiment (
     retail_confidence DECIMAL(10,2),
     construction_confidence DECIMAL(10,2),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, country)
+    PRIMARY KEY (date, country)
 );
 
 SELECT create_hypertable('europe.economic_sentiment', 'date', if_not_exists => TRUE);
 
 -- Global GDP (WORLD BANK)
 CREATE TABLE IF NOT EXISTS europe.global_gdp (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    country VARCHAR(100) NOT NULL,
+    country TEXT NOT NULL,
     gdp_current_usd DECIMAL(20,2),
     gdp_growth_rate DECIMAL(10,4),
     gdp_per_capita DECIMAL(15,2),
-    series_id VARCHAR(50),
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, country, series_id)
+    PRIMARY KEY (date, country, series_id)
 );
 
 SELECT create_hypertable('europe.global_gdp', 'date', if_not_exists => TRUE);
@@ -265,46 +252,43 @@ SELECT create_hypertable('europe.global_gdp', 'date', if_not_exists => TRUE);
 
 -- Benchmark Yields (FRED) - Multiple Countries
 CREATE TABLE IF NOT EXISTS fixed_income.benchmark_yields (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    country VARCHAR(10) NOT NULL,
-    maturity VARCHAR(20) NOT NULL,
+    country TEXT NOT NULL,
+    maturity TEXT NOT NULL,
     yield DECIMAL(10,4),
-    series_id VARCHAR(50),
-    source VARCHAR(50) DEFAULT 'FRED',
+    series_id TEXT,
+    source TEXT DEFAULT 'FRED',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, country, maturity, series_id)
+    PRIMARY KEY (date, country, maturity, series_id)
 );
 
 SELECT create_hypertable('fixed_income.benchmark_yields', 'date', if_not_exists => TRUE);
 
 -- Bond Market Basics (FRED)
 CREATE TABLE IF NOT EXISTS fixed_income.bond_market_basics (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    series_id VARCHAR(50) NOT NULL,
-    series_name VARCHAR(200),
+    series_id TEXT NOT NULL,
+    series_name TEXT,
     value DECIMAL(15,4),
-    category VARCHAR(100),
+    category TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('fixed_income.bond_market_basics', 'date', if_not_exists => TRUE);
 
 -- Corporate Bond Indices (FRED)
 CREATE TABLE IF NOT EXISTS fixed_income.corporate_bond_indices (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    index_name VARCHAR(100) NOT NULL,
+    index_name TEXT NOT NULL,
     index_value DECIMAL(15,4),
     yield DECIMAL(10,4),
     spread DECIMAL(10,4),
     duration DECIMAL(10,4),
-    rating VARCHAR(20),
-    series_id VARCHAR(50),
+    rating TEXT,
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, index_name, series_id)
+    PRIMARY KEY (date, index_name, series_id)
 );
 
 SELECT create_hypertable('fixed_income.corporate_bond_indices', 'date', if_not_exists => TRUE);
@@ -315,7 +299,6 @@ SELECT create_hypertable('fixed_income.corporate_bond_indices', 'date', if_not_e
 
 -- Inflation CPI & PPI (BLS)
 CREATE TABLE IF NOT EXISTS general_macro.inflation (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     cpi_all_items DECIMAL(10,4),
     cpi_core DECIMAL(10,4),
@@ -323,54 +306,51 @@ CREATE TABLE IF NOT EXISTS general_macro.inflation (
     ppi_all_commodities DECIMAL(10,4),
     ppi_core DECIMAL(10,4),
     ppi_yoy_change DECIMAL(10,4),
-    series_id VARCHAR(50),
+    series_id TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('general_macro.inflation', 'date', if_not_exists => TRUE);
 
 -- US Building Permits (FRED)
 CREATE TABLE IF NOT EXISTS general_macro.building_permits (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     total_permits INTEGER,
     single_family INTEGER,
     multi_family INTEGER,
-    series_id VARCHAR(50),
-    region VARCHAR(50),
+    series_id TEXT,
+    region TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id, region)
+    PRIMARY KEY (date, series_id, region)
 );
 
 SELECT create_hypertable('general_macro.building_permits', 'date', if_not_exists => TRUE);
 
 -- US M2 Money Supply (FRED)
 CREATE TABLE IF NOT EXISTS general_macro.m2_money_supply (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     m2_value DECIMAL(20,2),
     m2_yoy_change DECIMAL(10,4),
-    series_id VARCHAR(50),
+    series_id TEXT,
     seasonally_adjusted BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('general_macro.m2_money_supply', 'date', if_not_exists => TRUE);
 
 -- USD Trade Weighted Indices (FRED)
 CREATE TABLE IF NOT EXISTS general_macro.usd_trade_weighted (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     broad_index DECIMAL(10,4),
     major_currencies DECIMAL(10,4),
     other_important_trading_partners DECIMAL(10,4),
-    series_id VARCHAR(50),
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('general_macro.usd_trade_weighted', 'date', if_not_exists => TRUE);
@@ -381,8 +361,7 @@ SELECT create_hypertable('general_macro.usd_trade_weighted', 'date', if_not_exis
 
 -- ISM Manufacturing Index (QUANDL/ISM)
 CREATE TABLE IF NOT EXISTS survey_data.ism_manufacturing (
-    id SERIAL PRIMARY KEY,
-    date DATE NOT NULL,
+    date DATE NOT NULL PRIMARY KEY,
     pmi DECIMAL(10,2),
     new_orders DECIMAL(10,2),
     production DECIMAL(10,2),
@@ -394,16 +373,14 @@ CREATE TABLE IF NOT EXISTS survey_data.ism_manufacturing (
     backlog_orders DECIMAL(10,2),
     new_export_orders DECIMAL(10,2),
     imports DECIMAL(10,2),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 SELECT create_hypertable('survey_data.ism_manufacturing', 'date', if_not_exists => TRUE);
 
 -- ISM Non-Manufacturing Index (QUANDL/ISM)
 CREATE TABLE IF NOT EXISTS survey_data.ism_non_manufacturing (
-    id SERIAL PRIMARY KEY,
-    date DATE NOT NULL,
+    date DATE NOT NULL PRIMARY KEY,
     nmi DECIMAL(10,2),
     business_activity DECIMAL(10,2),
     new_orders DECIMAL(10,2),
@@ -414,29 +391,26 @@ CREATE TABLE IF NOT EXISTS survey_data.ism_non_manufacturing (
     backlog_orders DECIMAL(10,2),
     new_export_orders DECIMAL(10,2),
     imports DECIMAL(10,2),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 SELECT create_hypertable('survey_data.ism_non_manufacturing', 'date', if_not_exists => TRUE);
 
 -- NFIB Small Business Optimism Index (FRED)
 CREATE TABLE IF NOT EXISTS survey_data.nfib_optimism (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     optimism_index DECIMAL(10,2),
-    region VARCHAR(50),
-    industry VARCHAR(100),
-    series_id VARCHAR(50),
+    region TEXT,
+    industry TEXT,
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, region, industry)
+    PRIMARY KEY (date, region, industry)
 );
 
 SELECT create_hypertable('survey_data.nfib_optimism', 'date', if_not_exists => TRUE);
 
 -- NFIB Small Business Sentiment Components (FRED)
 CREATE TABLE IF NOT EXISTS survey_data.nfib_sentiment_components (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     earnings_trend DECIMAL(10,2),
     sales_expectations DECIMAL(10,2),
@@ -445,57 +419,51 @@ CREATE TABLE IF NOT EXISTS survey_data.nfib_sentiment_components (
     inventory_plans DECIMAL(10,2),
     capital_spending DECIMAL(10,2),
     credit_conditions DECIMAL(10,2),
-    series_id VARCHAR(50),
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('survey_data.nfib_sentiment_components', 'date', if_not_exists => TRUE);
 
 -- UMCSI - University of Michigan Consumer Sentiment Index (FRED)
 CREATE TABLE IF NOT EXISTS survey_data.umcsi (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     sentiment_index DECIMAL(10,2),
     current_conditions DECIMAL(10,2),
     expectations DECIMAL(10,2),
-    series_id VARCHAR(50),
+    series_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, series_id)
+    PRIMARY KEY (date, series_id)
 );
 
 SELECT create_hypertable('survey_data.umcsi', 'date', if_not_exists => TRUE);
 
 -- Correlation Analysis Tables
 CREATE TABLE IF NOT EXISTS survey_data.correlation_ism_manufacturing (
-    id SERIAL PRIMARY KEY,
-    date DATE NOT NULL,
+    date DATE NOT NULL PRIMARY KEY,
     ism_manufacturing DECIMAL(10,2),
     sp500_return DECIMAL(10,4),
     gdp_growth DECIMAL(10,4),
     correlation_coefficient DECIMAL(10,6),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS survey_data.correlation_ism_non_manufacturing (
-    id SERIAL PRIMARY KEY,
-    date DATE NOT NULL,
+    date DATE NOT NULL PRIMARY KEY,
     ism_non_manufacturing DECIMAL(10,2),
     sp500_return DECIMAL(10,4),
     gdp_growth DECIMAL(10,4),
     correlation_coefficient DECIMAL(10,6),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS survey_data.nfib_regional_optimism (
-    id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    region VARCHAR(50) NOT NULL,
+    region TEXT NOT NULL,
     optimism_index DECIMAL(10,2),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(date, region)
+    PRIMARY KEY (date, region)
 );
 
 -- =============================================================================

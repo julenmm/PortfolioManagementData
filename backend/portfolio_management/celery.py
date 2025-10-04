@@ -1,8 +1,10 @@
 import os
 from celery import Celery
+import django
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'portfolio_management.settings')
+django.setup()
 
 app = Celery('portfolio_management')
 

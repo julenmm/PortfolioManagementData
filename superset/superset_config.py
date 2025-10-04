@@ -14,16 +14,16 @@ APP_NAME = "Portfolio Management Dashboard"
 APP_ICON = "/static/assets/images/superset-logo@2x.png"
 APP_THEME = "light"
 
-# Database configuration
+# Database configuration - Using shared TimescaleDB
 SQLALCHEMY_DATABASE_URI = os.environ.get(
     'SUPERSET_DATABASE_URL',
-    'postgresql://superset_user:superset_secure_password_2024@superset_postgres:5432/superset_db'
+    f"postgresql://{os.environ.get('DATABASE_USER', 'portfolio_user')}:{os.environ.get('DATABASE_PASSWORD', 'portfolio_secure_password_2024')}@{os.environ.get('DATABASE_HOST', 'timescaledb')}:5432/{os.environ.get('DATABASE_DB', 'superset_db')}"
 )
 
-# Redis configuration
-REDIS_HOST = 'superset_redis'
-REDIS_PORT = 6379
-REDIS_DB = 0
+# Redis configuration - Using shared Redis
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+REDIS_DB = 1  # Use DB 1 for Superset (Django uses 0)
 
 # Cache configuration
 CACHE_CONFIG = {
@@ -92,6 +92,12 @@ FEATURE_FLAGS = {
 
 # Security configuration
 SECRET_KEY = os.environ.get('SUPERSET_SECRET_KEY', 'superset-secret-key-change-in-production-2024')
+
+# JWT configuration for async queries (must be at least 32 bytes)
+GLOBAL_ASYNC_QUERIES_JWT_SECRET = os.environ.get(
+    'SUPERSET_JWT_SECRET_KEY',
+    'superset-jwt-secret-key-for-async-queries-change-in-production-2024'
+)
 
 # CORS configuration
 ENABLE_CORS = True

@@ -66,7 +66,7 @@ docker-compose down
 ### Access Services:
 - **Django**: http://localhost:8000
 - **Airflow UI**: http://localhost:8080
-- **PGAdmin**: http://localhost:8080
+- **PGAdmin**: http://localhost:5050
 - **Superset**: http://localhost:8088
 
 ### Triggering DAGs in Dev Mode:
@@ -138,7 +138,7 @@ docker-compose -f docker-compose.prod.yml down
 - **Django**: http://localhost:8000
 - **Airflow UI**: http://localhost:8080
 - **Airflow Flower**: http://localhost:5555 (NEW!)
-- **PGAdmin**: http://localhost:8080
+- **PGAdmin**: http://localhost:5050
 - **Superset**: http://localhost:8088
 
 ### Scheduler Behavior:

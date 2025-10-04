@@ -1,0 +1,36 @@
+[2025-10-04T21:37:20.487+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: economic_data_daily_update.update_china_manufacturing_pmi scheduled__2025-10-03T06:00:00+00:00 [queued]>
+[2025-10-04T21:37:20.504+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: economic_data_daily_update.update_china_manufacturing_pmi scheduled__2025-10-03T06:00:00+00:00 [queued]>
+[2025-10-04T21:37:20.513+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 3
+[2025-10-04T21:37:21.846+0000] {taskinstance.py:2191} INFO - Executing <Task(PythonOperator): update_china_manufacturing_pmi> on 2025-10-03 06:00:00+00:00
+[2025-10-04T21:37:21.871+0000] {standard_task_runner.py:60} INFO - Started process 231 to run task
+[2025-10-04T21:37:21.905+0000] {standard_task_runner.py:87} INFO - Running: ['airflow', 'tasks', 'run', 'economic_data_daily_update', 'update_china_manufacturing_pmi', 'scheduled__2025-10-03T06:00:00+00:00', '--job-id', '15', '--raw', '--subdir', 'DAGS_FOLDER/economic_data_daily_update.py', '--cfg-path', '/tmp/tmpbd_2cxvu']
+[2025-10-04T21:37:21.907+0000] {standard_task_runner.py:88} INFO - Job 15: Subtask update_china_manufacturing_pmi
+[2025-10-04T21:37:58.958+0000] {task_command.py:423} INFO - Running <TaskInstance: economic_data_daily_update.update_china_manufacturing_pmi scheduled__2025-10-03T06:00:00+00:00 [running]> on host c5589f85b7af
+[2025-10-04T21:38:00.108+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='economic_data_team' AIRFLOW_CTX_DAG_ID='economic_data_daily_update' AIRFLOW_CTX_TASK_ID='update_china_manufacturing_pmi' AIRFLOW_CTX_EXECUTION_DATE='2025-10-03T06:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-10-03T06:00:00+00:00'
+[2025-10-04T21:38:00.143+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+  File "/opt/airflow/dags/economic_data_daily_update.py", line 57, in update_china_manufacturing_pmi
+    start_date = get_last_date('china', 'manufacturing_pmi', series_id) or '2010-01-01'
+  File "/opt/airflow/dags/utils/db_helpers.py", line 61, in get_last_date
+    result = hook.get_first(sql, parameters=(series_id,))
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/providers/common/sql/hooks/sql.py", line 270, in get_first
+    return self.run(sql=sql, parameters=parameters, handler=fetch_one_handler)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/providers/common/sql/hooks/sql.py", line 391, in run
+    with closing(self.get_conn()) as conn:
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/providers/postgres/hooks/postgres.py", line 128, in get_conn
+    conn = deepcopy(self.connection or self.get_connection(conn_id))
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/hooks/base.py", line 82, in get_connection
+    conn = Connection.get_connection_from_secrets(conn_id)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/connection.py", line 479, in get_connection_from_secrets
+    raise AirflowNotFoundException(f"The conn_id `{conn_id}` isn't defined")
+airflow.exceptions.AirflowNotFoundException: The conn_id `timescaledb_conn` isn't defined
+[2025-10-04T21:38:00.147+0000] {taskinstance.py:1138} INFO - Marking task as UP_FOR_RETRY. dag_id=economic_data_daily_update, task_id=update_china_manufacturing_pmi, execution_date=20251003T060000, start_date=20251004T213720, end_date=20251004T213800
+[2025-10-04T21:38:03.288+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 15 for task update_china_manufacturing_pmi (The conn_id `timescaledb_conn` isn't defined; 231)
+[2025-10-04T21:38:03.375+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-10-04T21:38:04.700+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check

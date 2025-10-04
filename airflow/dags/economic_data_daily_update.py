@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.operators.dummy import DummyOperator
+
 import sys
 import os
 
@@ -488,8 +488,27 @@ def update_umcsi(**context):
 # DEFINE DAG STRUCTURE
 # =============================================================================
 
-start = DummyOperator(task_id='start', dag=dag)
-end = DummyOperator(task_id='end', dag=dag)
+def start_pipeline(**context):
+    """Start the economic data pipeline"""
+    print(f"Starting economic data pipeline at {context['ds']}")
+    return "Pipeline started successfully"
+
+def end_pipeline(**context):
+    """End the economic data pipeline"""
+    print(f"Economic data pipeline completed at {context['ds']}")
+    return "Pipeline completed successfully"
+
+start = PythonOperator(
+    task_id='start',
+    python_callable=start_pipeline,
+    dag=dag,
+)
+
+end = PythonOperator(
+    task_id='end',
+    python_callable=end_pipeline,
+    dag=dag,
+)
 
 # China tasks
 china_pmi = PythonOperator(

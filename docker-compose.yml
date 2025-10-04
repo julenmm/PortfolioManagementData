@@ -142,6 +142,8 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__FERNET_KEY: ''
+      # Connection environment variables
+      AIRFLOW_CONN_TIMESCALEDB_CONN: 'postgres://portfolio_user:portfolio_secure_password_2024@timescaledb:5432/portfolio_db'
     ports: [ "${AIRFLOW_PORT}:8080" ]
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -159,6 +161,28 @@ services:
       retries: 5
     restart: "no"
 
+  airflow_scheduler:
+    image: apache/airflow:2.8.1
+    container_name: portfolio_airflow_scheduler
+    env_file: [ .env ]
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://portfolio_user:portfolio_secure_password_2024@timescaledb:5432/airflow_db
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__FERNET_KEY: ''
+      # Connection environment variables
+      AIRFLOW_CONN_TIMESCALEDB_CONN: 'postgres://portfolio_user:portfolio_secure_password_2024@timescaledb:5432/portfolio_db'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+    depends_on:
+      timescaledb: { condition: service_healthy }
+      airflow_init: { condition: service_completed_successfully }
+    networks: [ portfolio_network ]
+    command: scheduler
+    restart: "no"
+
   airflow_init:
     image: apache/airflow:2.8.1
     container_name: portfolio_airflow_init
@@ -168,6 +192,8 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__FERNET_KEY: ''
+      # Connection environment variables
+      AIRFLOW_CONN_TIMESCALEDB_CONN: 'postgres://portfolio_user:portfolio_secure_password_2024@timescaledb:5432/portfolio_db'
     depends_on:
       timescaledb: { condition: service_healthy }
     networks: [ portfolio_network ]
@@ -178,7 +204,8 @@ services:
     command: >
       bash -c "
         airflow db migrate &&
-        airflow users create --role Admin --username ${AIRFLOW_USERNAME:-admin} --password ${AIRFLOW_PASSWORD:-admin} --firstname Admin --lastname User --email admin@airflow.com || true
+        airflow users create --role Admin --username ${AIRFLOW_USERNAME:-admin} --password ${AIRFLOW_PASSWORD:-admin} --firstname Admin --lastname User --email admin@airflow.com || true &&
+        airflow connections add 'timescaledb_conn' --conn-type 'postgres' --conn-host 'timescaledb' --conn-schema 'portfolio_db' --conn-login 'portfolio_user' --conn-password 'portfolio_secure_password_2024' --conn-port '5432' || true
       "
     restart: "no"
 

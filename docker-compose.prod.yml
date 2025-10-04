@@ -1,0 +1,398 @@
+version: '3.8'
+
+# ============================================================================
+# PRODUCTION DOCKER COMPOSE - WITH AIRFLOW SCHEDULER
+# For production deployment with automated DAG scheduling
+# ============================================================================
+
+services:
+  # TimescaleDB (PostgreSQL with TimescaleDB extension)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: portfolio_timescaledb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./init-scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
+    networks:
+      - portfolio_network
+    restart: always
+
+  # PGAdmin4 for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: portfolio_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+    ports:
+      - "${PGADMIN_PORT}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - timescaledb
+    networks:
+      - portfolio_network
+    restart: always
+
+  # Redis for caching and message broker
+  redis:
+    image: redis:7-alpine
+    container_name: portfolio_redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - portfolio_network
+    restart: always
+    command: redis-server --appendonly yes
+
+  # Django Backend
+  django:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio_django
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+    ports:
+      - "${DJANGO_PORT}:8000"
+    volumes:
+      - ./backend:/app
+      - django_static:/app/staticfiles
+      - django_media:/app/media
+    depends_on:
+      - timescaledb
+      - redis
+    networks:
+      - portfolio_network
+    restart: always
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn portfolio_management.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+
+  # Celery Worker for Django
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio_celery_worker
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - timescaledb
+      - redis
+    networks:
+      - portfolio_network
+    restart: always
+    command: celery -A portfolio_management worker --loglevel=info --concurrency=4
+
+  # Celery Beat for scheduled tasks
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio_celery_beat
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - timescaledb
+      - redis
+    networks:
+      - portfolio_network
+    restart: always
+    command: celery -A portfolio_management beat --loglevel=info
+
+  # Apache Airflow - Postgres Database
+  airflow_postgres:
+    image: postgres:15
+    container_name: portfolio_airflow_postgres
+    environment:
+      POSTGRES_DB: ${AIRFLOW_DB}
+      POSTGRES_USER: ${AIRFLOW_DB_USER}
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    networks:
+      - portfolio_network
+    restart: always
+
+  # Apache Airflow - Redis
+  airflow_redis:
+    image: redis:7-alpine
+    container_name: portfolio_airflow_redis
+    volumes:
+      - airflow_redis_data:/data
+    networks:
+      - portfolio_network
+    restart: always
+    command: redis-server --appendonly yes
+
+  # Apache Airflow - Webserver
+  airflow_webserver:
+    image: apache/airflow:2.8.1
+    container_name: portfolio_airflow_webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__BROKER_URL: redis://:@airflow_redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'false'
+      AIRFLOW__WEBSERVER__RBAC: 'true'
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_USERNAME}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD}
+      _AIRFLOW_WWW_USER_EMAIL: ${AIRFLOW_EMAIL}
+      _AIRFLOW_WWW_USER_FIRSTNAME: ${AIRFLOW_FIRSTNAME}
+      _AIRFLOW_WWW_USER_LASTNAME: ${AIRFLOW_LASTNAME}
+      # API Keys for data sources
+      FRED_API_KEY: ${FRED_API_KEY}
+      BLS_API_KEY: ${BLS_API_KEY}
+      EIA_API_KEY: ${EIA_API_KEY}
+      NASDAQ_API_KEY: ${NASDAQ_API_KEY}
+    ports:
+      - "${AIRFLOW_PORT}:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - airflow_data:/opt/airflow
+    depends_on:
+      - airflow_postgres
+      - airflow_redis
+      - timescaledb
+    networks:
+      - portfolio_network
+    restart: always
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Apache Airflow - Scheduler (ENABLED in Production)
+  airflow_scheduler:
+    image: apache/airflow:2.8.1
+    container_name: portfolio_airflow_scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__BROKER_URL: redis://:@airflow_redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 30
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 60
+      AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: 'false'
+      # API Keys for data sources
+      FRED_API_KEY: ${FRED_API_KEY}
+      BLS_API_KEY: ${BLS_API_KEY}
+      EIA_API_KEY: ${EIA_API_KEY}
+      NASDAQ_API_KEY: ${NASDAQ_API_KEY}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - airflow_data:/opt/airflow
+    depends_on:
+      - airflow_postgres
+      - airflow_redis
+      - timescaledb
+    networks:
+      - portfolio_network
+    restart: always
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Apache Airflow - Worker
+  airflow_worker:
+    image: apache/airflow:2.8.1
+    container_name: portfolio_airflow_worker
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__BROKER_URL: redis://:@airflow_redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      # API Keys for data sources
+      FRED_API_KEY: ${FRED_API_KEY}
+      BLS_API_KEY: ${BLS_API_KEY}
+      EIA_API_KEY: ${EIA_API_KEY}
+      NASDAQ_API_KEY: ${NASDAQ_API_KEY}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - airflow_data:/opt/airflow
+    depends_on:
+      - airflow_postgres
+      - airflow_redis
+      - timescaledb
+    networks:
+      - portfolio_network
+    restart: always
+    command: celery worker
+    healthcheck:
+      test: ["CMD-SHELL", "celery --app airflow.executors.celery_executor.app inspect ping -d celery@$(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Apache Airflow - Flower (Celery Monitoring)
+  airflow_flower:
+    image: apache/airflow:2.8.1
+    container_name: portfolio_airflow_flower
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow_postgres:5432/${AIRFLOW_DB}
+      AIRFLOW__CELERY__BROKER_URL: redis://:@airflow_redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    ports:
+      - "${AIRFLOW_FLOWER_PORT}:5555"
+    depends_on:
+      - airflow_redis
+    networks:
+      - portfolio_network
+    restart: always
+    command: celery flower
+
+  # Apache Superset - Postgres Database
+  superset_postgres:
+    image: postgres:15
+    container_name: portfolio_superset_postgres
+    environment:
+      POSTGRES_DB: ${SUPERSET_DB}
+      POSTGRES_USER: ${SUPERSET_DB_USER}
+      POSTGRES_PASSWORD: ${SUPERSET_DB_PASSWORD}
+    volumes:
+      - superset_postgres_data:/var/lib/postgresql/data
+    networks:
+      - portfolio_network
+    restart: always
+
+  # Apache Superset - Redis
+  superset_redis:
+    image: redis:7-alpine
+    container_name: portfolio_superset_redis
+    volumes:
+      - superset_redis_data:/data
+    networks:
+      - portfolio_network
+    restart: always
+    command: redis-server --appendonly yes
+
+  # Apache Superset - Init
+  superset_init:
+    image: apache/superset:latest
+    container_name: portfolio_superset_init
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_CONFIG_PATH: /app/superset_config.py
+    volumes:
+      - ./superset/superset_config.py:/app/superset_config.py
+      - superset_data:/app/superset_home
+    depends_on:
+      - superset_postgres
+      - superset_redis
+    networks:
+      - portfolio_network
+    command: >
+      sh -c "
+        superset db upgrade &&
+        superset fab create-admin --username ${SUPERSET_USERNAME} --firstname ${SUPERSET_FIRSTNAME} --lastname ${SUPERSET_LASTNAME} --email ${SUPERSET_EMAIL} --password ${SUPERSET_PASSWORD} &&
+        superset init
+      "
+
+  # Apache Superset - Webserver
+  superset_webserver:
+    image: apache/superset:latest
+    container_name: portfolio_superset_webserver
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_CONFIG_PATH: /app/superset_config.py
+    ports:
+      - "${SUPERSET_PORT}:8088"
+    volumes:
+      - ./superset/superset_config.py:/app/superset_config.py
+      - superset_data:/app/superset_home
+    depends_on:
+      - superset_init
+    networks:
+      - portfolio_network
+    restart: always
+    command: gunicorn --bind 0.0.0.0:8088 --workers 4 --timeout 120 --limit-request-line 0 --limit-request-field_size 0 "superset.app:create_app()"
+
+  # Apache Superset - Worker
+  superset_worker:
+    image: apache/superset:latest
+    container_name: portfolio_superset_worker
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_CONFIG_PATH: /app/superset_config.py
+    volumes:
+      - ./superset/superset_config.py:/app/superset_config.py
+      - superset_data:/app/superset_home
+    depends_on:
+      - superset_init
+    networks:
+      - portfolio_network
+    restart: always
+    command: celery worker --app=superset.tasks.celery_app:app --loglevel=info --pool=solo
+
+volumes:
+  timescaledb_data:
+  pgadmin_data:
+  redis_data:
+  django_static:
+  django_media:
+  airflow_postgres_data:
+  airflow_redis_data:
+  airflow_data:
+  superset_postgres_data:
+  superset_redis_data:
+  superset_data:
+
+networks:
+  portfolio_network:
+    driver: bridge

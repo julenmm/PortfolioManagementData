@@ -75,6 +75,19 @@ CREATE TABLE IF NOT EXISTS china.real_rates (
 
 SELECT create_hypertable('china.real_rates', 'date', if_not_exists => TRUE);
 
+-- China Consumer Price Index (FRED)
+CREATE TABLE IF NOT EXISTS china.consumer_price_index (
+    date DATE NOT NULL,
+    cpi_value DECIMAL(10,4),
+    cpi_yoy_change DECIMAL(10,4),
+    source TEXT DEFAULT 'FRED',
+    series_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (date, series_id)
+);
+
+SELECT create_hypertable('china.consumer_price_index', 'date', if_not_exists => TRUE);
+
 -- =============================================================================
 -- COINCIDENT INDICATORS SCHEMA
 -- =============================================================================
@@ -473,6 +486,7 @@ CREATE TABLE IF NOT EXISTS survey_data.nfib_regional_optimism (
 -- China schema indexes
 CREATE INDEX IF NOT EXISTS idx_china_pmi_date ON china.manufacturing_pmi (date DESC);
 CREATE INDEX IF NOT EXISTS idx_china_rates_date ON china.real_rates (date DESC);
+CREATE INDEX IF NOT EXISTS idx_china_cpi_date ON china.consumer_price_index (date DESC);
 
 -- Coincident indicators indexes
 CREATE INDEX IF NOT EXISTS idx_durable_goods_date ON coincident_indicators.durable_goods_shipments (date DESC);

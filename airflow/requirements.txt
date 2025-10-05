@@ -1,0 +1,28 @@
+# Airflow DAGs Requirements
+# Web scraping and data processing libraries
+
+# Web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+selenium>=4.15.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# HTTP requests with better error handling (compatible with Airflow)
+urllib3>=1.26.0,<2.0.0
+
+# JSON parsing
+jsonschema>=4.17.0
+
+# Date/time handling
+python-dateutil>=2.8.0
+
+# Optional: For more advanced web scraping
+lxml>=4.9.0
+html5lib>=1.1
+
+yfinance==0.1.87
+multitasking==0.0.10
+

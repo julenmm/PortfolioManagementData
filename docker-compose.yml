@@ -134,7 +134,10 @@ services:
   # APACHE AIRFLOW
   # ----------------------------------------------------------------------------
   airflow_webserver:
-    image: apache/airflow:2.8.1
+    image: apache/airflow:3.1.0-python3.13
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
     container_name: portfolio_airflow_webserver
     env_file: [ .env ]
     environment:
@@ -162,7 +165,10 @@ services:
     restart: "no"
 
   airflow_scheduler:
-    image: apache/airflow:2.8.1
+    image: apache/airflow:3.1.0-python3.13
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
     container_name: portfolio_airflow_scheduler
     env_file: [ .env ]
     environment:
@@ -184,7 +190,10 @@ services:
     restart: "no"
 
   airflow_init:
-    image: apache/airflow:2.8.1
+    image: apache/airflow:3.1.0-python3.13
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
     container_name: portfolio_airflow_init
     env_file: [ .env ]
     environment:
